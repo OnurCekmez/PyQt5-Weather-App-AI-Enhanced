@@ -116,16 +116,30 @@ python weather_app.py
 ```
 
 ---
-## 📁 Project Structure
-pyqt5-weather-app/
-├── assets/
-├── legacy/
-│   └── README-v1.md
-├── weather_app.py
-├── requirements.txt
-├── README.md
-├── env.example
-└── LICENSE
+## 📦 Project Structure
+
+### 🟢 Main Branch
+- 📁 **pyqt5-weather-app/**
+  - 📂 assets/
+  - 📂 legacy/
+    - 📄 README-v1.md
+  - 📄 weather_app.py
+  - 📄 requirements.txt
+  - 📄 README.md
+  - 📄 LICENSE
+
+---
+
+### 🔵 AI Version Branch
+- 📁 **pyqt5-weather-app/**
+  - 📂 assets/
+  - 📂 legacy/
+    - 📄 README-v1.md
+  - 📄 weather_app.py
+  - 📄 requirements.txt
+  - 📄 README.md
+  - 📄 env.example ⚡ *(AI-specific)*
+  - 📄 LICENSE
 
 ---
 
