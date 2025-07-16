@@ -24,7 +24,7 @@ It aims to demonstrate clean code practices, API handling, and user-friendly des
 
 Here’s how the app looks:
 
-![App Screenshot](assets/app_ui.png)
+![App Screenshot](assets/v1.app_ui.png)
 
 ---
 
