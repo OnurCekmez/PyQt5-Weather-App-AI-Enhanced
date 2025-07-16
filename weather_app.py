@@ -1,36 +1,47 @@
+# pyright: reportAttributeAccessIssue=false
+
 from dotenv import load_dotenv
 import os
 import sys
 import requests
 from PyQt5.QtWidgets import (QApplication, QWidget, QLabel,
-                             QLineEdit, QPushButton, QVBoxLayout)
+                             QLineEdit, QPushButton, QVBoxLayout, QTextEdit)
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtGui import QPixmap, QIcon
+import google.generativeai as genai
 
 load_dotenv()
 
 class WeatherApp(QWidget):
     def __init__(self):
         super().__init__()
+        self.icon_label = QLabel(self)
+        icon_pixmap = QPixmap("assets/weather_icon.png")
+        self.icon_label.setPixmap(icon_pixmap.scaled(100, 100, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        self.icon_label.setAlignment(Qt.AlignCenter)
         self.city_label = QLabel("Enter city name: ", self)
         self.city_input = QLineEdit(self)
         self.get_weather_button = QPushButton("Get Weather", self)
         self.temperature_label = QLabel(self)
         self.emoji_label = QLabel(self)
         self.description_label = QLabel(self)
+        self.ai_label = QTextEdit(self)
+        self.ai_label.setReadOnly(True)
+        self.ai_label.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.initUI()
 
     def initUI(self):
         self.setWindowTitle("Weather App")
 
         vbox = QVBoxLayout()
-
+        vbox.addWidget(self.icon_label)
         vbox.addWidget(self.city_label)
         vbox.addWidget(self.city_input)
         vbox.addWidget(self.get_weather_button)
         vbox.addWidget(self.temperature_label)
         vbox.addWidget(self.emoji_label)
         vbox.addWidget(self.description_label)
+        vbox.addWidget(self.ai_label)
 
         self.setLayout(vbox)
 
@@ -39,6 +50,7 @@ class WeatherApp(QWidget):
         self.temperature_label.setAlignment(Qt.AlignCenter)
         self.emoji_label.setAlignment(Qt.AlignCenter)
         self.description_label.setAlignment(Qt.AlignCenter)
+        self.ai_label.setAlignment(Qt.AlignLeft)
 
         self.city_label.setObjectName("city_label")
         self.city_input.setObjectName("city_input")
@@ -46,6 +58,9 @@ class WeatherApp(QWidget):
         self.temperature_label.setObjectName("temperature_label")
         self.emoji_label.setObjectName("emoji_label")
         self.description_label.setObjectName("description_label")
+        self.ai_label.setObjectName("ai_label")
+        self.ai_label.setFixedHeight(100)
+        self.setFixedSize(600, 700)
 
         self.setStyleSheet("""
             QWidget {
@@ -87,6 +102,14 @@ class WeatherApp(QWidget):
                 font-size: 50px;
                 color: #555;
             }
+            QTextEdit#ai_label {
+                font-size: 30px;
+                color: #007700;
+                font-style: italic;
+                background: #eaffea;
+                border-radius: 8px;
+                padding: 8px;
+            }
         """)
 
         self.get_weather_button.clicked.connect(self.get_weather)
@@ -108,7 +131,7 @@ class WeatherApp(QWidget):
             if "error" in data:
                 error_code = data["error"]["code"]
                 match error_code:
-                    case 1006:  # No matching location found
+                    case 1006:
                         self.display_error("Not Found:\nCity not found")
                     case _:
                         self.display_error(f"API Error {error_code}:\n{data['error']['message']}")
@@ -139,9 +162,6 @@ class WeatherApp(QWidget):
                     self.display_error("Gateway Timeout:\nNo response from the server")
                 case _:
                     self.display_error(f"HTTP error occured:\n{http_error}")
-                
-                
-
         except requests.exceptions.ConnectionError:
             self.display_error("Connection Error:\nCheck your internet connection")
         except requests.exceptions.Timeout:
@@ -156,21 +176,34 @@ class WeatherApp(QWidget):
         self.temperature_label.setText(message)
         self.emoji_label.clear()
         self.description_label.clear()
+        self.ai_label.clear()
 
     def display_weather(self, data):
         temperature_c = data["current"]["temp_c"]
-        # print(temperature_c)
-        weather_id = data["current"]["condition"]["code"]
         weather_description = data["current"]["condition"]["text"]
 
         self.temperature_label.setStyleSheet("color: #333333; font-size: 75px;")
-
         self.temperature_label.setText(f"{temperature_c}℃")
         pixmap = self.get_weather_emoji(data)
         scaled_pixmap = pixmap.scaled(120, 120, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self.emoji_label.setPixmap(scaled_pixmap)
         self.description_label.setText(weather_description)
+        ai_message = self.get_ai_explanation(temperature_c, weather_description)
+        self.ai_label.setText(f"{ai_message}")
         
+    def get_ai_explanation(self, temperature_c, weather_description):
+        try:
+            gemini_api_key = os.getenv("GEMINI_API_KEY")
+            if gemini_api_key:
+                genai.configure(api_key=gemini_api_key)
+                prompt = f"The current temperature is {temperature_c}°C and the weather is '{weather_description}'. Give a short, friendly advice for today."
+                model = getattr(genai, "GenerativeModel")("gemini-2.5-flash")
+                response = model.generate_content(prompt)
+                ai_message = response.text
+                return ai_message
+        except Exception as e:
+            return f"AI Error: {e}"
+
     @staticmethod
     def get_weather_emoji(data):
         icon_url = "http:" + data["current"]["condition"]["icon"]
@@ -181,6 +214,7 @@ class WeatherApp(QWidget):
 
 def main():
     app = QApplication(sys.argv)
+    app.setWindowIcon(QIcon("assets/weather_icon.png"))  # Set dock icon for macOS
     weather_app = WeatherApp()
     weather_app.show()
     sys.exit(app.exec_())
